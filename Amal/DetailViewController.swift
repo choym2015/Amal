@@ -17,6 +17,24 @@ class DetailViewController: UIViewController {
     private var isShowingFront = true
     private let synthesizer = AVSpeechSynthesizer()
 
+    private static let speedRates: [Float] = [0.38, 0.43, 0.55]
+    private static let speedLabels = ["0.5x", "0.75x", "1.0x"]
+
+    private var speechRate: Float {
+        let saved = UserDefaults.standard.float(forKey: "speechRate")
+        return DetailViewController.speedRates.contains(saved) ? saved : 0.38
+    }
+
+    private let speedStackView: UIStackView = {
+        let sv = UIStackView()
+        sv.axis = .vertical
+        sv.alignment = .leading
+        sv.spacing = 3
+        sv.translatesAutoresizingMaskIntoConstraints = false
+        return sv
+    }()
+    private var speedTextLabels: [UILabel] = []
+
     // MARK: - UI
 
     private let backButton: UIButton = {
@@ -205,12 +223,9 @@ class DetailViewController: UIViewController {
         config.baseBackgroundColor = .amalGreen
         config.baseForegroundColor = .white
         config.image = UIImage(systemName: "speaker.wave.2.fill")
-        config.title = "발음 듣기"
-        config.imagePadding = 8
         config.cornerStyle = .capsule
-        config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
+        config.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14)
         b.configuration = config
-        b.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
         b.translatesAutoresizingMaskIntoConstraints = false
         return b
     }()
@@ -334,12 +349,31 @@ class DetailViewController: UIViewController {
     }
 
     private func setupListenButton() {
-        view.addSubview(listenButton)
+        // Build speed label stack
+        for text in DetailViewController.speedLabels {
+            let l = UILabel()
+            l.text = text
+            l.isUserInteractionEnabled = false
+            speedTextLabels.append(l)
+            speedStackView.addArrangedSubview(l)
+        }
+        let tap = UITapGestureRecognizer(target: self, action: #selector(didTapSpeedStack))
+        speedStackView.addGestureRecognizer(tap)
+
+        // Horizontal row: [🔊 button]  [천천히 / 보통 / 빠르게]
+        let rowStack = UIStackView(arrangedSubviews: [listenButton, speedStackView])
+        rowStack.axis = .horizontal
+        rowStack.alignment = .center
+        rowStack.spacing = 16
+        rowStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(rowStack)
         listenButton.addTarget(self, action: #selector(didTapListen), for: .touchUpInside)
+
         NSLayoutConstraint.activate([
-            listenButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            listenButton.topAnchor.constraint(equalTo: cardShadowContainer.bottomAnchor, constant: 20),
+            rowStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            rowStack.topAnchor.constraint(equalTo: cardShadowContainer.bottomAnchor, constant: 20),
         ])
+        updateSpeedLabels()
     }
 
     private func setupNavButtons() {
@@ -452,6 +486,28 @@ class DetailViewController: UIViewController {
         }
     }
 
+    private func updateSpeedLabels() {
+        let rate = speechRate
+        let selectedIdx = DetailViewController.speedRates.firstIndex(of: rate) ?? 0
+        for (i, label) in speedTextLabels.enumerated() {
+            if i == selectedIdx {
+                label.font = UIFont.systemFont(ofSize: 13, weight: .bold)
+                label.textColor = .amalGold
+            } else {
+                label.font = UIFont.systemFont(ofSize: 13, weight: .regular)
+                label.textColor = UIColor(hex: 0xbbbbbb)
+            }
+        }
+    }
+
+    @objc private func didTapSpeedStack() {
+        let current = speechRate
+        let idx = DetailViewController.speedRates.firstIndex(of: current) ?? 0
+        let next = (idx + 1) % DetailViewController.speedRates.count
+        UserDefaults.standard.set(DetailViewController.speedRates[next], forKey: "speechRate")
+        updateSpeedLabels()
+    }
+
     @objc private func didTapListen() {
         guard !words.isEmpty, currentIndex < words.count else { return }
         let word = words[currentIndex]
@@ -462,17 +518,15 @@ class DetailViewController: UIViewController {
 
         synthesizer.stopSpeaking(at: .immediate)
 
-        // Standard Arabic
         let arabicUtterance = AVSpeechUtterance(string: word.arabic)
         arabicUtterance.voice = AVSpeechSynthesisVoice(language: "ar")
-        arabicUtterance.rate = 0.42
+        arabicUtterance.rate = speechRate
         synthesizer.speak(arabicUtterance)
 
-        // Darija (romanized, spoken with Arabic voice after a pause)
         if let darija = word.darija {
             let darijaUtterance = AVSpeechUtterance(string: darija)
             darijaUtterance.voice = AVSpeechSynthesisVoice(language: "ar")
-            darijaUtterance.rate = 0.42
+            darijaUtterance.rate = speechRate
             darijaUtterance.preUtteranceDelay = 0.4
             synthesizer.speak(darijaUtterance)
         }

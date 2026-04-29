@@ -758,15 +758,18 @@ speakerButton.centerXAnchor.constraint(equalTo: speakerContainerView.centerXAnch
 
         synthesizer.stopSpeaking(at: .immediate)
 
+        let savedRate = UserDefaults.standard.float(forKey: "speechRate")
+        let rate: Float = savedRate > 0 ? savedRate : 0.38
+
         let arabicUtterance = AVSpeechUtterance(string: word.arabic)
         arabicUtterance.voice = AVSpeechSynthesisVoice(language: "ar")
-        arabicUtterance.rate = 0.42
+        arabicUtterance.rate = rate
         synthesizer.speak(arabicUtterance)
 
         if let darija = word.darija {
             let darijaUtterance = AVSpeechUtterance(string: darija)
             darijaUtterance.voice = AVSpeechSynthesisVoice(language: "ar")
-            darijaUtterance.rate = 0.42
+            darijaUtterance.rate = rate
             darijaUtterance.preUtteranceDelay = 0.4
             synthesizer.speak(darijaUtterance)
         }
