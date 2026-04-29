@@ -74,6 +74,13 @@ class DetailViewController: UIViewController {
         return l
     }()
 
+    // Container for the bottom half — flip is scoped to this view only
+    private let bottomContainer: UIView = {
+        let v = UIView()
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+
     // Shadow wrapper (does not clip, so shadow is visible)
     private let cardShadowContainer: UIView = {
         let v = UIView()
@@ -96,12 +103,6 @@ class DetailViewController: UIViewController {
     }()
 
     // MARK: - Front
-
-    private let frontView: UIView = {
-        let v = UIView()
-        v.translatesAutoresizingMaskIntoConstraints = false
-        return v
-    }()
 
     private let arabicTopHalf: UIView = {
         let v = UIView()
@@ -183,6 +184,8 @@ class DetailViewController: UIViewController {
         let v = UIView()
         v.backgroundColor = .amalBackground
         v.isHidden = true
+        v.layer.cornerRadius = 24
+        v.layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
@@ -264,19 +267,19 @@ class DetailViewController: UIViewController {
         view.addSubview(cardShadowContainer)
         cardShadowContainer.addSubview(cardView)
 
-        // Front (top = romanized/phonetic, bottom = arabic)
-        cardView.addSubview(frontView)
-        frontView.addSubview(arabicTopHalf)
+        // Green top half — always visible
+        cardView.addSubview(arabicTopHalf)
         arabicTopHalf.addSubview(romanizedStack)
         romanizedStack.addArrangedSubview(romanizedLabel)
         romanizedStack.addArrangedSubview(koreanPhoneticLabel)
-        frontView.addSubview(romanizedBottomHalf)
+
+        // Bottom flip container — only this part flips
+        cardView.addSubview(bottomContainer)
+        bottomContainer.addSubview(romanizedBottomHalf)   // front face (red)
         romanizedBottomHalf.addSubview(arabicCategoryLabel)
         romanizedBottomHalf.addSubview(arabicLabel)
         romanizedBottomHalf.addSubview(tapHintLabel)
-
-        // Back
-        cardView.addSubview(backView)
+        bottomContainer.addSubview(backView)              // back face (light)
         backView.addSubview(koreanCategoryLabel)
         backView.addSubview(koreanMeaningLabel)
         backView.addSubview(backTapHintLabel)
@@ -288,35 +291,34 @@ class DetailViewController: UIViewController {
             cardShadowContainer.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.85),
             cardShadowContainer.heightAnchor.constraint(equalTo: cardShadowContainer.widthAnchor, multiplier: 1.35),
 
-            // Card (fills shadow container)
+            // Card fills shadow container
             cardView.topAnchor.constraint(equalTo: cardShadowContainer.topAnchor),
             cardView.leadingAnchor.constraint(equalTo: cardShadowContainer.leadingAnchor),
             cardView.trailingAnchor.constraint(equalTo: cardShadowContainer.trailingAnchor),
             cardView.bottomAnchor.constraint(equalTo: cardShadowContainer.bottomAnchor),
 
-            // Front view (fills card)
-            frontView.topAnchor.constraint(equalTo: cardView.topAnchor),
-            frontView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
-            frontView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
-            frontView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor),
+            // Green top half (55%)
+            arabicTopHalf.topAnchor.constraint(equalTo: cardView.topAnchor),
+            arabicTopHalf.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
+            arabicTopHalf.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
+            arabicTopHalf.heightAnchor.constraint(equalTo: cardView.heightAnchor, multiplier: 0.5),
 
-            // Arabic top half (55%)
-            arabicTopHalf.topAnchor.constraint(equalTo: frontView.topAnchor),
-            arabicTopHalf.leadingAnchor.constraint(equalTo: frontView.leadingAnchor),
-            arabicTopHalf.trailingAnchor.constraint(equalTo: frontView.trailingAnchor),
-            arabicTopHalf.heightAnchor.constraint(equalTo: frontView.heightAnchor, multiplier: 0.55),
-
-            // Top half (green): stack centered vertically
             romanizedStack.centerXAnchor.constraint(equalTo: arabicTopHalf.centerXAnchor),
             romanizedStack.centerYAnchor.constraint(equalTo: arabicTopHalf.centerYAnchor),
             romanizedStack.leadingAnchor.constraint(equalTo: arabicTopHalf.leadingAnchor, constant: 16),
             romanizedStack.trailingAnchor.constraint(equalTo: arabicTopHalf.trailingAnchor, constant: -16),
 
-            // Bottom half (red): Arabic script + tap hint at bottom
-            romanizedBottomHalf.topAnchor.constraint(equalTo: arabicTopHalf.bottomAnchor),
-            romanizedBottomHalf.leadingAnchor.constraint(equalTo: frontView.leadingAnchor),
-            romanizedBottomHalf.trailingAnchor.constraint(equalTo: frontView.trailingAnchor),
-            romanizedBottomHalf.bottomAnchor.constraint(equalTo: frontView.bottomAnchor),
+            // Bottom container (bottom 45%)
+            bottomContainer.topAnchor.constraint(equalTo: arabicTopHalf.bottomAnchor),
+            bottomContainer.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
+            bottomContainer.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
+            bottomContainer.bottomAnchor.constraint(equalTo: cardView.bottomAnchor),
+
+            // Red front fills bottomContainer
+            romanizedBottomHalf.topAnchor.constraint(equalTo: bottomContainer.topAnchor),
+            romanizedBottomHalf.leadingAnchor.constraint(equalTo: bottomContainer.leadingAnchor),
+            romanizedBottomHalf.trailingAnchor.constraint(equalTo: bottomContainer.trailingAnchor),
+            romanizedBottomHalf.bottomAnchor.constraint(equalTo: bottomContainer.bottomAnchor),
 
             arabicCategoryLabel.topAnchor.constraint(equalTo: romanizedBottomHalf.topAnchor, constant: 16),
             arabicCategoryLabel.centerXAnchor.constraint(equalTo: romanizedBottomHalf.centerXAnchor),
@@ -329,14 +331,14 @@ class DetailViewController: UIViewController {
             tapHintLabel.centerXAnchor.constraint(equalTo: romanizedBottomHalf.centerXAnchor),
             tapHintLabel.bottomAnchor.constraint(equalTo: romanizedBottomHalf.bottomAnchor, constant: -16),
 
-            // Back view (fills card)
-            backView.topAnchor.constraint(equalTo: cardView.topAnchor),
-            backView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
-            backView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
-            backView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor),
+            // Korean back fills bottomContainer
+            backView.topAnchor.constraint(equalTo: bottomContainer.topAnchor),
+            backView.leadingAnchor.constraint(equalTo: bottomContainer.leadingAnchor),
+            backView.trailingAnchor.constraint(equalTo: bottomContainer.trailingAnchor),
+            backView.bottomAnchor.constraint(equalTo: bottomContainer.bottomAnchor),
 
             koreanCategoryLabel.centerXAnchor.constraint(equalTo: backView.centerXAnchor),
-            koreanCategoryLabel.topAnchor.constraint(equalTo: backView.topAnchor, constant: 28),
+            koreanCategoryLabel.topAnchor.constraint(equalTo: backView.topAnchor, constant: 16),
 
             koreanMeaningLabel.centerXAnchor.constraint(equalTo: backView.centerXAnchor),
             koreanMeaningLabel.centerYAnchor.constraint(equalTo: backView.centerYAnchor),
@@ -344,7 +346,7 @@ class DetailViewController: UIViewController {
             koreanMeaningLabel.trailingAnchor.constraint(equalTo: backView.trailingAnchor, constant: -24),
 
             backTapHintLabel.centerXAnchor.constraint(equalTo: backView.centerXAnchor),
-            backTapHintLabel.bottomAnchor.constraint(equalTo: backView.bottomAnchor, constant: -24),
+            backTapHintLabel.bottomAnchor.constraint(equalTo: backView.bottomAnchor, constant: -16),
         ])
     }
 
@@ -440,24 +442,23 @@ class DetailViewController: UIViewController {
 
     private func resetToFront() {
         guard !isShowingFront else { return }
-        frontView.isHidden = false
+        romanizedBottomHalf.isHidden = false
         backView.isHidden = true
         isShowingFront = true
-        cardView.layer.borderWidth = 0
+        backView.layer.borderWidth = 0
     }
 
     // MARK: - Actions
 
     @objc private func didTapCard() {
         let options: UIView.AnimationOptions = isShowingFront ? .transitionFlipFromRight : .transitionFlipFromLeft
-        UIView.transition(with: cardView, duration: 0.5, options: options) {
-            self.frontView.isHidden = self.isShowingFront
-            self.backView.isHidden = !self.isShowingFront
-        }
         isShowingFront.toggle()
-        let showingBack = !isShowingFront
-        cardView.layer.borderColor = UIColor.amalGold.cgColor
-        cardView.layer.borderWidth = showingBack ? 3 : 0
+        UIView.transition(with: bottomContainer, duration: 0.5, options: options) {
+            self.romanizedBottomHalf.isHidden = !self.isShowingFront
+            self.backView.isHidden = self.isShowingFront
+        }
+        backView.layer.borderColor = UIColor.amalGold.cgColor
+        backView.layer.borderWidth = isShowingFront ? 0 : 2.5
     }
 
     @objc private func didTapNext() {
